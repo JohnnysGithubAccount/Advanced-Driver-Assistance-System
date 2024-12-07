@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+    <title>ADAS</title>
+</head>
+<body>
+    <div class="main-container">
+        <div class="left-main">
+            <div class="logo">
+                <h1>Advanced Driver-Assistance System</h1>
+            </div>
+            <div class="car">
+                <div class="notification" id="collision">
+                    Driving safely
+                </div>
+                <img src="{{url_for('static', filename='images/car.jpg')}}" alt="Car">
+            </div>
+            <div class="signs">
+                <div class="title">
+                    <h1>Detected Sign</h1>
+                </div>
+                <div id="sign-img">
+                    Loading...
+                </div>
+            </div>
+        </div>
+        <div class="main-divider">
+
+        </div>
+        <div class="right-main">
+            <div class="header">
+                <div id="current-time"></div>
+            </div>
+            <div class="screen">
+                <img id="video" src="{{url_for('video_feed')}}" alt="Video Feed">
+            </div>
+            <div class="name">
+                <h1>Developed by Johnny</h1>
+            </div>
+        </div>
+    </div>
+    <script src="{{url_for('static', filename='app.js')}}"></script>
+</body>
+</html>
