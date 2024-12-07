@@ -1,0 +1,16 @@
+artifact_uri: file:///D:/UsingSpace/Projects/Artificial Intelligent/ComputerVision/Detection
+  System for Autonomous Driving Car/Moving Object Detection/runs/mlflow/710059185726055055/2763aac62a0444529b87bfa3d45d400e/artifacts
+end_time: 1731306959363
+entry_point_name: ''
+experiment_id: '710059185726055055'
+lifecycle_stage: active
+run_id: 2763aac62a0444529b87bfa3d45d400e
+run_name: yolo_model4
+run_uuid: 2763aac62a0444529b87bfa3d45d400e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1731306958437
+status: 3
+tags: []
+user_id: Admins
