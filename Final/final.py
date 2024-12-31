@@ -2,7 +2,6 @@ import json
 import math
 from flask import Flask, render_template, Response
 import datetime
-import time
 import cv2
 from ultralytics import YOLO
 import cvzone
@@ -12,10 +11,14 @@ import torch
 from sort import *
 from lane_segment_processing import traditional_approach, deep_learning_handle
 from utils import traffic_signs, classNames, lane_segmentation, vehicle_heights, average_focal_length
+# source 1 won't be used, source 2 is benchmark video from my phone, source 3 is youtube video
+from utils import video_source2, video_source3
 
 
-print(torch.cuda.is_available())
-
+# check if gpu is available
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(device)
+usingSort = False
 
 # Initialize the Flask app
 app = Flask(__name__)
@@ -24,29 +27,31 @@ app = Flask(__name__)
 print("INFO: Initializing YOLO model")
 yolo_model = YOLO(r"D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision"
                   r"\Detection System for Autonomous Driving Car"
-                  r"\Moving Object Detection\weights\yolo_model7\weights\best.pt")
+                  r"\Moving Object Detection\weights\yolo_model7\weights\best.pt").to(device)
 
 # Set the video source
-# video_source = r"D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision" \
-#                r"\Detection System for Autonomous Driving Car" \
-#                r"\Moving Object Detection\data\video" \
-#                r"\test8.mp4"
-video_source = r"D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision" \
-               r"\Detection System for Autonomous Driving Car" \
-               r"\Moving Object Detection\data\video" \
-               r"\project_video.mp4"
-# video_source = 0
+video_source = video_source3
+# video_source = 0  # this is for using camera
 cap = cv2.VideoCapture(video_source)
 
-vehicle_tracker = Sort(max_age=20, min_hits=3, iou_threshold=.3)
-sign_tracker = Sort(max_age=20, min_hits=3, iou_threshold=.3)
+if usingSort:
+    vehicle_tracker = Sort(max_age=20, min_hits=3, iou_threshold=.3)
+    sign_tracker = Sort(max_age=20, min_hits=3, iou_threshold=.3)
 
-danger_region = np.array([
-    [300, 720],
-    [550, 420+70],
-    [730, 420+70],
-    [1280-250, 720]
-], np.int32)
+if video_source != video_source3:
+    danger_region = np.array([
+        [300, 720],
+        [560, 420 + 80],
+        [720, 420 + 80],
+        [1280 - 250, 720]
+    ], np.int32)
+else:
+    danger_region = np.array([
+        [460, 720],
+        [600, 420 + 140],
+        [680, 420 + 140],
+        [1280 - 410, 720]
+    ], np.int32)
 
 # either Driving Safely or Collision Warning
 driving_situation = "Driving Safely"  # global variable containing the current driving situation
@@ -63,12 +68,12 @@ if not cap.isOpened():
     exit()
 
 # Create a queue to hold processed frames for YOLO and TFLite
-yolo_queue = queue.Queue(maxsize=10)
-tflite_queue = queue.Queue(maxsize=10)
+yolo_queue = queue.Queue(maxsize=1)
+tflite_queue = queue.Queue(maxsize=1)
 
 
 def process_yolo(frame):
-    results = yolo_model(frame, stream=True, device="0")
+    results = yolo_model(frame, stream=True)
     return results
 
 
@@ -92,7 +97,6 @@ def process_segmented_lane(frame):
     segmented_mask = segmented_mask.astype(np.uint8)
     kernel = np.ones((3, 3), np.uint8)
     segmented_mask = cv2.morphologyEx(segmented_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
-
     return cv2.resize(segmented_mask, (frame.shape[1], frame.shape[0]))
 
 
@@ -100,17 +104,21 @@ def generate_frames():
     global driving_situation
     global frame_counts
     global list_signs
-    collision_detected = False
+    global usingSort
     num_frames = 0
     to_delete = []
 
     while True:
         success, img = cap.read()
+        img = cv2.resize(img, (1280, 720))
+
         if not success:
+            print("Can't read frame")
             break
 
         # Start threads for both models
-        yolo_thread = threading.Thread(target=lambda q, arg1: q.put(process_yolo(arg1)), args=(yolo_queue, img))
+        yolo_thread = threading.Thread(target=lambda q, arg1: q.put(process_yolo(arg1)),
+                                       args=(yolo_queue, img))
         lane_segment_thread = threading.Thread(target=lambda q, arg1: q.put(process_segmented_lane(arg1)),
                                                args=(tflite_queue, img.astype(np.float32)))
 
@@ -120,19 +128,27 @@ def generate_frames():
         vehicle_detections = np.empty((0, 5))
         sign_detections = np.empty((0, 5))
 
-        # Get results from YOLO queue
-        if not yolo_queue.empty():
-            yolo_results = yolo_queue.get()
-            collision_hist = []
+        collision_detected = False
+
+        # Wait for both threads to finish and get results
+        yolo_results = yolo_queue.get()
+        segmented_mask = tflite_queue.get()
+
+        # Get YOLO result
+        # if not yolo_queue.empty():
+        if yolo_results:
+            # yolo_results = yolo_queue.get()
             for r in yolo_results:
                 boxes = r.boxes
                 for box in boxes:
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                     x, y, w, h = int(x1), int(y1), int(x2 - x1), int(y2 - y1)
+                    conf = math.ceil((box.conf[0] * 100)) / 100
+                    if conf < .3:
+                        continue
                     cvzone.cornerRect(img,
                                       bbox=(int(x1), int(y1), int(x2 - x1), int(y2 - y1)),
                                       colorR=(255, 0, 0))
-                    conf = math.ceil((box.conf[0] * 100)) / 100
                     cls = int(box.cls[0])
                     class_name = classNames[cls]
 
@@ -195,54 +211,53 @@ def generate_frames():
                             if class_name in frame_counts:
                                 # name: {exist: 0, not_found: 0, num_waits}
                                 frame_counts[class_name][0] += 1
-                                print('test')
-                                print(frame_counts)
                             else:
                                 # name: {exist: 0, not_found: 0, num_waits}
                                 frame_counts[class_name] = [1, 0, 0]
 
-            vehicleTracker = vehicle_tracker.update(vehicle_detections)
-            signTracker = sign_tracker.update(sign_detections)
-
             driving_situation = "Collision Warning" if collision_detected else "Driving Safely"
 
-            # check for collision
-            for result in vehicleTracker:
-                x1, y1, x2, y2, object_id = result
-                x, y, w, h = int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)
-                cx, cy = int(x1) + w // 2, int(y1) + h // 2
-                cv2.circle(img, (cx, cy), 5, (0, 255, 0), cv2.FILLED)
+            if usingSort:
+                vehicleTracker = vehicle_tracker.update(vehicle_detections)
+                signTracker = sign_tracker.update(sign_detections)
 
-            # update signs to gui
-            for result in signTracker:
-                x1, y1, x2, y2, object_id = result
-                x, y, w, h = int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)
-                cx, cy = int(x1) + w // 2, int(y1) + h // 2
-                cv2.circle(img, (cx, cy), 5, (0, 255, 0), cv2.FILLED)
+                for result in vehicleTracker:
+                    x1, y1, x2, y2, object_id = result
+                    x, y, w, h = int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)
+                    cx, cy = int(x1) + w // 2, int(y1) + h // 2
+                    cv2.circle(img, (cx, cy), 5, (0, 255, 0), cv2.FILLED)
 
-        # Get results from lane segmentation queue
-        if not tflite_queue.empty():
-            segmented_mask = tflite_queue.get()
+                # update signs to gui
+                for result in signTracker:
+                    x1, y1, x2, y2, object_id = result
+                    x, y, w, h = int(x1), int(y1), int(x2) - int(x1), int(y2) - int(y1)
+                    cx, cy = int(x1) + w // 2, int(y1) + h // 2
+                    cv2.circle(img, (cx, cy), 5, (0, 255, 0), cv2.FILLED)
+
+        # Get results from lane segmentation
+        # if not tflite_queue.empty():
+        if segmented_mask is not None:
+            # segmented_mask = tflite_queue.get()
             mask = segmented_mask * 255
-
             result = process_lane(img, mask, approach='deep')
             if not isinstance(result, int):
                 img = result.copy()
                 cv2.polylines(img, [danger_region], isClosed=True, color=(0, 175, 255), thickness=3)
             else:
-                cv2.polylines(img, [danger_region], isClosed=True, color=(0 ,175, 255), thickness=3)
+                cv2.polylines(img, [danger_region], isClosed=True, color=(0, 175, 255), thickness=3)
 
         # Prepare the frame for streaming
         ret, buffer = cv2.imencode('.jpg', img)
         frame = buffer.tobytes()
 
         if isinstance(video_source, str):
-            if cv2.waitKey(15) == ord('q'):
+            if cv2.waitKey(1) == ord('q'):
                 break
 
-        print(frame_counts)
+        # process traffic signs
+        # print(frame_counts)
         for key, value in frame_counts.items():
-            if value[1] >= delete_sign_threshold:
+            if value[1] >= delete_sign_threshold * 3:
                 to_delete.append(key)
                 if key in list_signs:
                     list_signs.remove(key)
@@ -325,6 +340,10 @@ def update_signs():
 if __name__ == "__main__":
     try:
         # threading.Thread(target=update_driving_situation, daemon=True).start()
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    except Exception as e:
+        print(e)
     finally:
+        print('Finished')
         cap.release()  # Release the camera when done
+        cv2.destroyAllWindows()

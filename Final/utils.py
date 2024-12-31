@@ -4,6 +4,22 @@ import time
 import numpy as np
 
 
+video_source1 = r"D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision" \
+               r"\Detection System for Autonomous Driving Car" \
+               r"\Moving Object Detection\data\video" \
+               r"\youtube_video1.mp4"
+video_source2 = r"D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision" \
+               r"\Detection System for Autonomous Driving Car" \
+               r"\Moving Object Detection\data\video" \
+               r"\project_video.mp4"
+video_source3 = r"\\?\D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision" \
+                r"\Detection System for Autonomous Driving Car\Moving Object Detection" \
+                r"\data\video" \
+                r"\(795) BEST AUTOBAHN DRIVE video to " \
+                r"STUTTGART GERMANY 🇩🇪 ASMR Drive Video Original Sound - " \
+                r"YouTube - Cốc Cốc 2024-12-20 09-37-29.mp4"
+
+
 start_time = time.time()
 print(f"INFO: Initializing Lane segment model")
 lane_segmentation_path = r"D:\UsingSpace\Projects\Artificial Intelligent\ComputerVision" \
@@ -69,7 +85,7 @@ classNames = ['DP.135', 'P.102', 'P.103a', 'P.103b', 'P.103c',
               'W.207b', 'W.207c', 'W.208', 'W.209', 'W.210',
               'W.219', 'W.221b', 'W.224', 'W.225', 'W.227',
               'W.233', 'W.235', 'W.245a',
-          'bus', 'car', 'motorbike', 'pedestrian', 'truck']
+              'bus', 'car', 'motorbike', 'pedestrian', 'truck']
 
 traffic_signs = {
     'DP.135': 'End of all previously signed prohibitions',
@@ -144,4 +160,7 @@ f_x = 1887.6598193189468
 f_y = 1870.0813223886414
 average_focal_length = (f_x + f_y) / 2
 
-polygon_coords = np.array([[300, 720], [630, 420], [700, 420], [1280-300, 720]], np.int32)
+polygon_coords = np.array([[300, 720],
+                           [630, 420],
+                           [700, 420],
+                           [1280-300, 720]], np.int32)
