@@ -18,10 +18,10 @@ The Advanced Driver Assistance System (ADAS) is a comprehensive solution designe
 ![image](https://github.com/user-attachments/assets/0b69d5c0-81ad-4b8c-8d81-636d98d8801a)
 
 The system contains 4 main blocks:
-- **YOLOv8n: Perform object detection
-- **U-Net: Lane segmentation
-- **Processing: Processing output of the first 2 blocks the give the final output frame
-- **Graphic User Interface
+- **YOLOv8n**: Perform object detection
+- **U-Net**: Lane segmentation
+- **Processing**: Processing output of the first 2 blocks the give the final output frame
+- **Graphic User Interface**
 
 ## Distance estimation
 ![image](https://github.com/user-attachments/assets/b20c993f-928d-4c59-95f5-af774f585be4)
