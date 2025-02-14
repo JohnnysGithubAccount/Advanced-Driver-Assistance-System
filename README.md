@@ -1,5 +1,14 @@
 # Advanced Driver Assistance System (ADAS)
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Software Architecture](#software-architecture)
+- [Distance Estimation](#distance-estimation)
+- [Lane Segmentation](#lane-segmentation)
+- [Collision Warning](#collision-warning)
+
 ## Overview
 
 The Advanced Driver Assistance System (ADAS) is a comprehensive solution designed to enhance vehicle safety and facilitate a smoother driving experience. This project incorporates a Flask web application that provides a graphical user interface (GUI) for real-time monitoring and interaction. Key features include distance measurements, collision warning, vehicle and traffic sign detection, and lane segmentation.
@@ -36,3 +45,4 @@ Here is the algorithm used for the lane segmentation traditionally which is with
 ## Collision Warning
 ![image](https://github.com/user-attachments/assets/b4468c9c-e240-4726-b823-f404a9c31196)
 
+This feature provides real-time alerts to prevent potential collisions by analyzing the proximity and speed of nearby vehicles.
